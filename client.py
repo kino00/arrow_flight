@@ -106,22 +106,6 @@ def get_check_data(client, connection_args={}):
             tables.append(df)
     return pandas.concat(tables)
 
-def writer(host_name ,table, check):
-    write_data = []
-    for i in range(2, table.shape[1]):
-        for row in table.iloc[:,[0,1,i]].itertuples():
-            write_data.append((table.columns[i],row[1], row[2], row[3]))
-    #if len(check) > 0:
-    #    print(check[0].iat[0,11])
-    print(write_data)
-    
-    write_list = []
-    for (a, b, c, d) in write_data:
-        write_list.append('{} {} {} {} {}\n'.format(host_name, a, b, c, d))
-    with open("data/data.txt", "w") as f:
-        f.write(''.join(write_list))
-        
-
 def write(host_name, table, check):
     write_list = []
     for i in range(2, 16):
@@ -211,13 +195,10 @@ def main():
                 print("Server is not ready, waiting...")
     
     path_list = list_flights(client, connection_args)
-    #print(path_list)
     #minutes_path = select_path(path_list)
     #table = get_table(client, minutes_path, conection_args)
-    #get_table(client, path_list, connection_args)
     table = get_table(client, path_list, connection_args)
     
-    #do_action(client, "in_check", connection_args)
     check = []
     if do_action(client, "in_check", connection_args) == "in_data":
         check.append(get_check_data(client, connection_args))
