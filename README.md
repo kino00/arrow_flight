@@ -30,4 +30,14 @@ Server.pyとclient.pyではpandasやpyarrowを使用しているため、これ�
 推奨する。
 
 $ pip install pyarrow
+
 $ pip install pandas
+
+
+TCPReplayの使い方
+
+インタフェース名を指定してパケットの送信を行う際にTCPReplayが活躍する
+その際に使用するコマンドを以下に示す
+
+$ tcpreplay -i <インタフェース名> <pcapファイル名> 
+
