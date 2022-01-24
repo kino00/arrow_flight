@@ -34,8 +34,6 @@ pub struct PacketAttr {
     pub src_port: u16,
     pub dst_port: u16,
     pub length: u32,
-    pub sequence: u32,
-    pub ack: u32,
     pub transaction: u16,
     pub protocol: u16,
     pub len: u16,
@@ -57,8 +55,6 @@ impl PacketAttr {
         src_port: u16,
         dst_port: u16,
         length: u32,
-        sequence: u32,
-        ack: u32,
     ) -> Self {
         Self {
             interface_name: interface_name,
@@ -69,8 +65,6 @@ impl PacketAttr {
             src_port: src_port,
             dst_port: dst_port,
             length: length,
-            sequence: sequence,
-            ack: ack,
             transaction: 0,
             protocol: 0,
             len: 0,
@@ -364,8 +358,6 @@ impl PacketAttr {
             self.src_port.clone(),
             self.dst_port.clone(),
             self.length.clone(),
-            self.sequence.clone(),
-            self.ack.clone()
         );
         cp.transaction = self.transaction.clone();
         cp.protocol = self.protocol.clone();
@@ -552,9 +544,7 @@ fn handle_tcp_packet(
                 destination,
                 tcp.get_source().clone(),
                 tcp.get_destination().clone(),
-                (packet.len() as u32),
-                tcp.get_sequence().clone(),
-                tcp.get_acknowledgement().clone()
+                (packet.len() as u32)
             );
             packet_attr.set_modbus(&modbus_tcp, &tcp.payload());
             return Some(Action::Log(packet_attr))

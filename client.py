@@ -32,7 +32,6 @@ def list_flights(client, connection_args={}):
     for flight in client.list_flights():
         descriptor = flight.descriptor
         if descriptor.descriptor_type == pyarrow.flight.DescriptorType.PATH:
-            #print("Path:", descriptor.path[0].decode())
             path_list.append(descriptor.path[0].decode())
         elif descriptor.descriptor_type == pyarrow.flight.DescriptorType.CMD:
             print("Command:", descriptor.command)
@@ -58,17 +57,6 @@ def get_flight(args, client, connection_args={}):
             df = reader.read_pandas()
             print(df)
 
-def do_action(client, action_name, connection_args={}):
-    try:
-        buf = pyarrow.allocate_buffer(0)
-        action = pyarrow.flight.Action(action_name, buf)
-        #print('Running action', action_name)
-        for result in client.do_action(action):
-            print(result.body.to_pybytes().decode())
-            return result.body.to_pybytes().decode()
-    except pyarrow.lib.ArrowIOError as e:
-        print("Error calling action:", e)
-        
 def select_path(path_list):
     m = datetime.timedelta(hours=9, minutes=1)
     now = datetime.datetime.now()
@@ -93,61 +81,33 @@ def get_table(client, minutes_path, connection_args={}):
                 df = reader.read_pandas()
                 tables.append(df)
     return pandas.concat(tables)
-    
-def get_check_data(client, connection_args={}):
-    tables = []
-    descriptor = pyarrow.flight.FlightDescriptor.for_path("check_data")
-    info = client.get_flight_info(descriptor)
-    for endpoint in info.endpoints:
-        for location in endpoint.locations:
-            get_client = pyarrow.flight.FlightClient(location, **connection_args)
-            reader = get_client.do_get(endpoint.ticket)
-            df = reader.read_pandas()
-            tables.append(df)
-    return pandas.concat(tables)
 
-def write(host_name, table, check):
+def write(host_name, table):
     write_list = []
-    for i in range(2, 16):
+    for i in range(2, 14):
         for row in table.iloc[:,[0,1,i]].itertuples():
             write_list.append('{} {} {} {:0>9} {}\n'.format(host_name, table.columns[i], row[1], row[2], row[3]))
-    for row in table[table['SrcPort'] == 502].iloc[:,[0, 1, 20]].itertuples():
-        write_list.append('{} {} {} {:0>9} {}\n'.format(host_name, table.columns[20], row[1], row[2], row[3]))
-    for row in table[table['Function'] == 1].iloc[:,[0, 1, 16, 17, 18, 19]].itertuples():
+    for row in table[(table['Function'] == 1)|(table['Function'] == 2)].iloc[:,[0, 1, 14, 15, 16, 17]].itertuples():
         if row[8] == 502:
             write_list.append('{} {} {} {:0>9} {}\n'.format(host_name, "Coil", row[1], row[2], row[3]))
             write_list.append('{} {} {} {:0>9} {}\n'.format(host_name, "CoilData", row[1], row[2], row[4]))
         else:
             write_list.append('{} {} {} {:0>9} {}\n'.format(host_name, "CoidMultCount", row[1], row[2], row[5]))
             write_list.append('{} {} {} {:0>9} {}\n'.format(host_name, "CoilMultData", row[1], row[2], row[6]))
-    for row in table[table['Function'] == 2].iloc[:,[0, 1, 16, 17, 18, 19]].itertuples():
-        if row[8] == 502:
-            write_list.append('{} {} {} {:0>9} {}\n'.format(host_name, "Coil", row[1], row[2], row[3]))
-            write_list.append('{} {} {} {:0>9} {}\n'.format(host_name, "CoilData", row[1], row[2], row[4]))
-        else:
-            write_list.append('{} {} {} {:0>9} {}\n'.format(host_name, "CoidMultCount", row[1], row[2], row[5]))
-            write_list.append('{} {} {} {:0>9} {}\n'.format(host_name, "CoilMultData", row[1], row[2], row[6]))
-    for row in table[table['Function'] == 3].iloc[:,[0, 1, 16, 17, 18, 19]].itertuples():
+    for row in table[(table['Function'] == 3)|(table['Function'] == 4)].iloc[:,[0, 1, 14, 15, 16, 17]].itertuples():
         if row[8] == 502:
             write_list.append('{} {} {} {:0>9} {}\n'.format(host_name, "Register", row[1], row[2], row[3]))
             write_list.append('{} {} {} {:0>9} {}\n'.format(host_name, "RegisterData", row[1], row[2], row[4]))
         else:
             write_list.append('{} {} {} {:0>9} {}\n'.format(host_name, "RegisterMultCount", row[1], row[2], row[5]))
             write_list.append('{} {} {} {:0>9} {}\n'.format(host_name, "RegisterMultData", row[1], row[2], row[6]))
-    for row in table[table['Function'] == 4].iloc[:,[0, 1, 16, 17, 18, 19]].itertuples():
-        if row[8] == 502:
-            write_list.append('{} {} {} {:0>9} {}\n'.format(host_name, "Register", row[1], row[2], row[3]))
-            write_list.append('{} {} {} {:0>9} {}\n'.format(host_name, "RegisterData", row[1], row[2], row[4]))
-        else:
-            write_list.append('{} {} {} {:0>9} {}\n'.format(host_name, "RegisterMultCount", row[1], row[2], row[5]))
-            write_list.append('{} {} {} {:0>9} {}\n'.format(host_name, "RegisterMultData", row[1], row[2], row[6]))
-    for row in table[table['Function'] == 5].iloc[:,[0, 1, 16, 17]].itertuples():
+    for row in table[table['Function'] == 5].iloc[:,[0, 1, 14, 15]].itertuples():
         write_list.append('{} {} {} {:0>9} {}\n'.format(host_name, "Coil", row[1], row[2], row[3]))
         write_list.append('{} {} {} {:0>9} {:016b}\n'.format(host_name, "CoilData", row[1], row[2], row[4]))
-    for row in table[table['Function'] == 6].iloc[:,[0, 1, 16, 17, 18, 19]].itertuples():
-        write_list.append('{} {} {} {:0>9} {}\n'.format(host_name, "Coil", row[1], row[2], row[3]))
-        write_list.append('{} {} {} {:0>9} {:016b}\n'.format(host_name, "CoilData", row[1], row[2], row[4]))
-    for row in table[table['Function'] == 15].iloc[:,[0, 1, 16, 17, 18, 19]].itertuples():
+    for row in table[table['Function'] == 6].iloc[:,[0, 1, 14, 15]].itertuples():
+        write_list.append('{} {} {} {:0>9} {}\n'.format(host_name, "Register", row[1], row[2], row[3]))
+        write_list.append('{} {} {} {:0>9} {:016b}\n'.format(host_name, "RegisterData", row[1], row[2], row[4]))
+    for row in table[table['Function'] == 15].iloc[:,[0, 1, 14, 15, 16, 17]].itertuples():
         if row[8] == 502:
             write_list.append('{} {} {} {:0>9} {}\n'.format(host_name, "Coil", row[1], row[2], row[3]))
             write_list.append('{} {} {} {:0>9} {}\n'.format(host_name, "CoilData", row[1], row[2], row[4]))
@@ -156,7 +116,7 @@ def write(host_name, table, check):
         else:
             write_list.append('{} {} {} {:0>9} {}\n'.format(host_name, "Coil", row[1], row[2], row[3]))
             write_list.append('{} {} {} {:0>9} {}\n'.format(host_name, "CoilData", row[1], row[2], row[4]))
-    for row in table[table['Function'] == 16].iloc[:,[0, 1, 16, 17, 18, 19]].itertuples():
+    for row in table[table['Function'] == 16].iloc[:,[0, 1, 14, 15, 16, 17]].itertuples():
         if row[8] == 502:
             write_list.append('{} {} {} {:0>9} {}\n'.format(host_name, "Register", row[1], row[2], row[3]))
             write_list.append('{} {} {} {:0>9} {}\n'.format(host_name, "RegisterData", row[1], row[2], row[4]))
@@ -165,10 +125,6 @@ def write(host_name, table, check):
         else:
             write_list.append('{} {} {} {:0>9} {}\n'.format(host_name, "Register", row[1], row[2], row[3]))
             write_list.append('{} {} {} {:0>9} {}\n'.format(host_name, "RegisterData", row[1], row[2], row[4]))
-    
-    if len(write_list) > 0:
-        if len(check) > 0:
-            write_list.append('{} {} {} {:0>9} {} \n'.format(host_name, "DurationOutlier", table.iat[0,0], table.iat[0,1], check[0].iat[0,11]))
     
     with open("data/data.txt", "w") as f:
         f.write(''.join(write_list))
@@ -178,7 +134,6 @@ def main():
 
     
     host = 'localhost'
-    #host = '127.0.0.1'
     port = 5005
     scheme = "grpc+tcp"
     connection_args = {}
@@ -195,20 +150,12 @@ def main():
                 print("Server is not ready, waiting...")
     
     path_list = list_flights(client, connection_args)
-    #minutes_path = select_path(path_list)
-    #table = get_table(client, minutes_path, conection_args)
-    table = get_table(client, path_list, connection_args)
+    minutes_path = select_path(path_list)
+    table = get_table(client, minutes_path, conection_args)
+    #table = get_table(client, path_list, connection_args)
     
-    check = []
-    if do_action(client, "in_check", connection_args) == "in_data":
-        check.append(get_check_data(client, connection_args))
-    
-    write("plc1", table, check)
-    
-    #print(check)
-    #print(table)
-    #print(table.shape)
-    #print(table.columns)
+    write("plc1", table)
+
 
 if __name__ == '__main__':
     main()

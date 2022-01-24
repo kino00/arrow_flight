@@ -26,14 +26,10 @@ import socket
 
 import pyarrow
 import pyarrow.flight
-import pandas
-
-pandas.set_option('display.max_rows',100)
-pandas.set_option('display.max_columns',100)
 
 class FlightServer(pyarrow.flight.FlightServerBase):
     def __init__(self, host="localhost", location=None,
-                 max_flights=None, check_data=[],
+                 max_flights=None,
                  tls_certificates=None, verify_client=False,
                  root_certificates=None, auth_handler=None):
         super(FlightServer, self).__init__(
@@ -41,8 +37,6 @@ class FlightServer(pyarrow.flight.FlightServerBase):
             root_certificates)
         self.flights = collections.OrderedDict()
         self.max_flights = max_flights
-        self.check_data = check_data
-        #self.flights = {}
         self.host = host
         self.tls_certificates = tls_certificates
 
@@ -83,12 +77,6 @@ class FlightServer(pyarrow.flight.FlightServerBase):
 
     def get_flight_info(self, context, descriptor):
         key = FlightServer.descriptor_to_key(descriptor)
-        if key[2][0].decode() == 'check_data':
-            if len(self.check_data) > 0:
-                table = self.check_data[0]
-                return self._make_flight_info(key, descriptor, table)
-            else:
-                return KeyError('No check_data yet.')
         if key in self.flights:
             table = self.flights[key]
             return self._make_flight_info(key, descriptor, table)
@@ -96,15 +84,7 @@ class FlightServer(pyarrow.flight.FlightServerBase):
 
     def do_put(self, context, descriptor, reader, writer):
         key = FlightServer.descriptor_to_key(descriptor)
-        name = key[2][0].decode()
-        table = reader.read_all()
-        #print(table)
-        if name == 'check_data':
-            print("check_data")
-            self.check_data.append(table);
-            
-        else:
-            self.flights[key] = table
+        self.flights[key] = reader.read_all()
             
         if len(self.flights) > self.max_flights:
             self.flights.popitem(False)
@@ -135,13 +115,6 @@ class FlightServer(pyarrow.flight.FlightServerBase):
             # Shut down on background thread to avoid blocking current
             # request
             threading.Thread(target=self._shutdown).start()
-        elif action.type == "in_check":
-            if len(self.check_data) > 0:
-                yield pyarrow.flight.Result(pyarrow.py_buffer(b'in_data'))
-            else:
-                yield pyarrow.flight.Result(pyarrow.py_buffer(b'not_data'))
-        else:
-            raise KeyError("Unknown action {!r}".format(action.type))
 
     def _shutdown(self):
         """Shut down after a delay."""
