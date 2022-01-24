@@ -177,8 +177,7 @@ def main():
             tls_private_key = key_file.read()
         tls_certificates.append((tls_cert_chain, tls_private_key))
 
-    #location = "{}://{}:{}".format(scheme, args.host, args.port)
-    location = "{}://{}:{}".format(scheme, "127.0.0.1", args.port)
+    location = "{}://{}:{}".format(scheme, args.host, args.port)
 
     server = FlightServer(args.host, location, args.max_flights,
                           tls_certificates=tls_certificates,
