@@ -450,12 +450,6 @@ pub async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
                 // win_fronts[k] を初期化するだけ．window_durationを超えたら，
                 // output_interval ごとに出力する．
                 log::info!("{:?}", v);
-                let utc: DateTime<Utc> = Utc::now();
-                if first_flag {
-                    if counter <= 60 {
-                        counter += 1;
-                    }
-                }
 
                 if win_fronts[k] != win_back {
                     match window_type {
